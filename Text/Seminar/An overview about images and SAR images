@@ -25,7 +25,7 @@
     \section*{\centering{Resumo}}
     \vspace{4mm}
     
-Esta apresentação tem como objetivo principal mostrar os avanços feitos com a revisão bibliográfica. Além disso, mostrar uma visão geral sobre o projeto de pesquisa e os assuntos que são necessários para uma boa compreensão da pergunta ciêntifica.
+Esta apresentação tem como objetivo principal mostrar os avanços feitos com a revisão bibliográfica. Além disso, mostrar uma visão geral sobre o projeto de pesquisa e os assuntos que são necessários para uma boa compreensão da pergunta científica.
 
 	\section{Etapas do seminário}
     
@@ -39,12 +39,12 @@ Esta apresentação tem como objetivo principal mostrar os avanços feitos com a
 		\item Sensoriamento remoto
 			\begin{itemize}
 				\item Sensor passivo e Sensor ativo
-				\item Espectro eletromagnético e quantização de propriedades fisicas
+				\item Espectro eletromagnético e quantização de propriedades físicas
             \end{itemize}
-        \item Imagens Sar (Synthetic Aperture Radar)    
+        \item Imagens SAR (Synthetic Aperture Radar)    
             \begin{itemize}
 				\item Obtenção de dados
-                \item Diferença entre imagens opticas e imagens SAR
+                \item Diferença entre imagens ópticas e imagens SAR
                 \item Formato das imagens SAR
 			\end{itemize}
 		
@@ -78,7 +78,7 @@ Esta apresentação tem como objetivo principal mostrar os avanços feitos com a
 			\end{center}
 		\end{figure}
     
-    A primeira representação é uma imagem continua projetada em uma matriz de sensores, a segunda é o resultado dos processos de Amostragem e Quantização, os quais são reponsaveis por transformar valores contínuos em discretos.
+    A primeira representação é uma imagem continua projetada em uma matriz de sensores, a segunda é o resultado dos processos de Amostragem e Quantização, os quais são responsáveis por transformar valores contínuos em discretos.
     \newpage
     
     \subsection{Imagem multi-dimensional e multi-espectral}
@@ -106,7 +106,7 @@ inteiros para cada spel $\mathbf{p \in D_I}$.
 			\end{center}
 		\end{figure}
     
-    Sensores ativos captam a energia refletida ou emitida de um alvo que foi iluminado por uma fonte de radiação externa, geralmente o sol. Sensores ativos enviam suas próprias ondas (comprimento longo) para que em seguida possa capta-las, portanto, podem monitorar sem a luz do sol e quase não são afetados por condições do tempo.
+    Sensores ativos captam a energia refletida ou emitida de um alvo que foi iluminado por uma fonte de radiação externa, geralmente o sol. Sensores ativos enviam suas próprias ondas (comprimento longo) para que em seguida possa capta-las, portanto podem monitorar sem a luz do sol e quase não são afetados por condições do tempo.
     \vspace{4mm}
     \subsection{Espectro eletromagnético e quantização de propriedades físicas}
     \vspace{4mm}
@@ -130,7 +130,7 @@ inteiros para cada spel $\mathbf{p \in D_I}$.
     	\label{figRotulo}
   	\end{figure}
     
-    A geometria básica de um sistema de imageamento por Radar de Abertura Sintética é mostrado acima. Nesse sistema, a plataforma (avião ou satélite) com o sensor SAR(ativo) se desloca a uma velocidade V em relação ao solo, a uma altura H, apontando a antena lateralmente com um ângulo $\mathbf{\theta}$ em relação ao ponto mais baixo. Durante o percuso vários pulsos são emitidos para que depois sejam captados e processados para gerar uma imagem SAR.
+    A geometria básica de um sistema de imageamento por Radar de Abertura Sintética é mostrado acima. Nesse sistema, a plataforma (avião ou satélite) com o sensor SAR(ativo) se desloca a uma velocidade V em relação ao solo, a uma altura H, apontando a antena lateralmente com um ângulo $\mathbf{\theta}$ em relação ao ponto mais baixo. Durante o percurso vários pulsos são emitidos para que depois sejam captados e processados para gerar uma imagem SAR.
     
     \newpage
     
@@ -142,9 +142,9 @@ inteiros para cada spel $\mathbf{p \in D_I}$.
     	\label{figRotulo}
   	\end{figure}
     
-    Como as imagens SAR utilizam a banda espectral das microondas elas podem penetrar determinados alvos, tal penetração depende proporcionalmente do seu tamanho de onda, fica claro perceber que esse sistema de obtenção de imagens é util para obtenção de dados em locais que costumam ter muita interferencia climática (Formação de nuvens). Podem percerber que na primeira imagem perdemos as informações que existem abaixo das nuvens, mas isso não ocorre na segunda imagem. 
+    Como as imagens SAR utilizam a banda espectral das microondas elas podem penetrar determinados alvos, tal penetração depende proporcionalmente do seu tamanho de onda, fica claro perceber que esse sistema de obtenção de imagens é util para obtenção de dados em locais que costumam ter muita interferência climática (Formação de nuvens). Podem perceber que na primeira imagem perdemos as informações que existem abaixo das nuvens, mas isso não ocorre na segunda imagem. 
     \vspace{7mm}
     \section{Considerações finais}
-    Logo, foram mostrados algumas definições, representações e conceitos que permeiam a area referente a processamento de imagens em especial SAR, tal revisão ampliou meu entendimento sobre a pergunta de pesquisa. Os próximos passos serão dados em direção a implementação de funções e representações de imagens SAR. 
+    Logo, foram mostrados algumas definições, representações e conceitos que permeiam a área referente a processamento de imagens em especial SAR, tal revisão ampliou meu entendimento sobre a pergunta de pesquisa. Os próximos passos serão dados em direção a implementação de funções e representações de imagens SAR. 
     
 \end{document}
