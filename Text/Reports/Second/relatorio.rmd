@@ -1,0 +1,493 @@
+---
+title: "Uma compreensão das bibliotecas de imagens disponíveis em R"
+author: "John Omena, Alejandro Frery"
+date: "Janeiro 15, 2018"
+output: html_notebook
+---
+
+### Objetivo
+
+O intuito desse documento é promover um entendimento sobre as bibliotecas de imagens disponíveis em R, teremos uma básica estrutura na qual iremos primeiramente explicar a motivação por trás de cada função, a parte do código e a conclusão sobre a biblioteca. Além disso, estarei disponibilizando onde será possível encontrar e obter os dados que foram utilizados na parte dos códigos. 
+
+### Sobre os dados
+
+Os dados utilizados foram escolhidos com intuito de promover uma leve compreensão sobre as imagens PolSAR e foram obtidos no site da [Uavsar](https://goo.gl/TjEp4W), além disso a [documentação do formato](https://goo.gl/TmNdjM) e os [dados da imagem](https://goo.gl/Sr7gB4) podem ser facilmente encontrados no site. Estaremos trabalhando com o arquivo .mlc (calibrated multi-looked) e apenas com as bandas RGB do dado PolSAR que são a HH, HV e VV respectivamente.
+
+### Conversão do dado PolSAR para Rdata
+
+Com os dados baixados e com as referências dos arquivos estamos prontos para executar o código abaixo e gerar nosso Rdata.
+
+```{r}
+
+# Devemos passar as referências dos arquivos .mlc que representam a banda RGB e as dimensões da
+# imagem.
+Read_RGB_mlc <- function(fileR, fileG, fileB, nrow, ncol){
+  
+  dataR <- matrix(readBin(fileR, double(), n = nrow * ncol, size = 4, endian = "little"),
+                  ncol = ncol, nrow = nrow, byrow = TRUE)
+  dataG <- matrix(readBin(fileG, double(), n = nrow * ncol, size = 4, endian = "little"),
+                  ncol = ncol, nrow = nrow, byrow = TRUE)
+  dataB <- matrix(readBin(fileB, double(), n = nrow * ncol, size = 4, endian = "little"),
+                  ncol = ncol, nrow = nrow, byrow = TRUE)
+  
+  
+  RGB_polsar <- array( 0, dim = c(nrow, ncol, 3) )
+  RGB_polsar[,,1] <- dataR
+  RGB_polsar[,,2] <- dataG
+  RGB_polsar[,,3] <- dataB
+  
+  
+  return(RGB_polsar)
+}  
+
+filer <- file("HHHH.mlc", "rb")
+fileg <- file("HVHV.mlc", "rb")
+fileb <- file("VVVV.mlc", "rb")
+
+# Obtendo o Rdata através da função acima.
+UavsarRGB <- Read_RGB_mlc(filer, fileg, fileb, 702, 206)
+
+# Fechando ligações e removendo as referências.
+close(filer)
+close(fileg)
+close(fileb)
+rm(filer, fileg, fileb)
+
+```
+
+### Decomposição de Pauli e a visualização imagematrix
+
+Com o Rdata em mãos iremos obter uma visualização do dado para um melhor entendimento, isso será possível com a biblioteca stats que fará a equalização do dado e em seguida a biblioteca Imagematrix gerará sua visualização, entretanto esta ultima foi descontinuada e poderá ser encontrada no [repositorio cran do github](https://goo.gl/ywMWGx), além disso iremos gerar uma visualização com a decomposição de Pauli. O código abaixo descreve o processo:
+
+```{r}
+require(stats)
+require(Imagematrix)
+
+# Esta função irá equalizar nosso Rdata.
+Equal_RGB <- function(data){
+  
+  data[,,1] <- matrix(ecdf(data[,,1])(data[,,1]), nrow=nrow(data[,,1]),
+                      ncol=ncol(data[,,1]))
+  data[,,2] <- matrix(ecdf(data[,,2])(data[,,2]), nrow=nrow(data[,,2]),
+                      ncol=ncol(data[,,2]))
+  data[,,3] <- matrix(ecdf(data[,,3])(data[,,3]), nrow=nrow(data[,,3]),
+                      ncol=ncol(data[,,3]))  
+
+  return(data)
+}
+
+# Obtendo o Rdata Equalizado.
+UavsarRGB_Eq <- Equal_RGB(UavsarRGB)
+
+# Gerando o objeto imagematrix com o Rdata Equalizado
+UavsarRGB_Eq_im <- imagematrix(UavsarRGB_Eq)
+
+# Gerando a visualização do objeto imagematrix.
+plot(UavsarRGB_Eq_im)
+
+# Esta função gera um dado de acordo com a decomposição de Pauli.
+Pauli_data <- function(dataRGB){
+  
+  
+  Pauli <- array( 0, dim = dim(dataRGB) )
+  Pauli[,,1] <- dataRGB[,,1] - dataRGB[,,3] 
+  Pauli[,,2] <- dataRGB[,,2]
+  Pauli[,,3] <- dataRGB[,,1] + dataRGB[,,3]
+  
+  Pauli <- Equal_RGB(Pauli)
+  return(imagematrix(Pauli))
+
+}
+
+# Gerando o dado com a decomposição de Pauli
+UavsarRGB_Pauli <- Pauli_data(UavsarRGB)
+
+# Visualizando o dado com tal decomposição
+plot(UavsarRGB_Pauli)
+```
+
+### Conclusões e observação
+
+Após a execução dos códigos, teremos uma melhor noção de como o nosso dado se comporta, não obstante obtivemos diversos dados que poderão ser manipulados com as funções das bibliotecas existentes na linguagem R. Além disso, no momento que as funções forem explicadas estaremos utilizando um dado fixo "Uavsar_temp" para receber as saídas e evitando assim gasto desnecessário de memoria.
+
+### Biblioteca __"OpenImageR"__
+
+```{r}
+require(OpenImageR)
+```
+
+
+* __Função "readImage"__: Possibilita a leitura de imagens png, jpeg, jpg e tiff, necessitando
+apenas especificar onde a imagem está salva, em seguida o dado é transformado em uma matrix ou array. Como já temos nosso dado em formato de array, não iremos mostrar essa parte do código.
+
+* __Função "imageShow"__: Gera a visualização de uma imagem podendo ser passado como entrada um objeto com 2 ou 3 dimensões, vamos testar a função com nosso Rdata.
+
+```{r}
+imageShow(UavsarRGB_Eq)
+```
+
+* __Função "writeImage"__: Realiza a escrita em formatos png, jpeg, jpg e tiff, sendo passado como argumento um objeto com 2 ou 3 dimensões (matrix, data frame ou array).
+
+```{r}
+writeImage(UavsarRGB_Eq, file_name = 'Uavsar.jpeg')
+```
+
+* __Função "rgb_2gray"__: Converte uma imagem RGB para o formato Gray, sendo necessário passar apenas o dado como uma matrix, data frame ou array.
+
+```{r}
+Uavsar_temp <- rgb_2gray(UavsarRGB_Eq)
+plot(imagematrix(Uavsar_temp))
+```
+
+* __Função "cropImage"__: Tem a capacidade de realizar o corte em uma imagem, é necessário passar quatro argumentos o dado, a largura, altura, e o tipo que pode ser ‘equal_spaced’ quando queremos que o corte seja feito em ambas as direções ou ‘user_defined’ quando não queremos em ambas direções.
+
+```{r}
+# Com o comando type setado para 'user_defined'
+Uavsar_temp <- cropImage(UavsarRGB_Eq, new_width = 10:170, new_height = 15:190, type = 'user_defined')
+plot(imagematrix(Uavsar_temp))
+# Com o comando type setada para 'equal_spaced'
+Uavsar_temp <- cropImage(UavsarRGB_Eq, new_width = 170, new_height = 170, type = 'equal_spaced')
+plot(imagematrix(Uavsar_temp))
+```
+
+* __Função "flipImage"__: Pode gerar um espelhamento horizontal ou vertical na Imagem, sendo necessário informar o dado e a direção como parâmetros.
+
+```{r}
+# Iremos apenas obter sua visualização, caso queira obter um dado é necessario apenas atribuir a um objeto 
+Uavsar_temp <- flipImage(UavsarRGB_Eq, mode = "vertical")
+plot(imagematrix(Uavsar_temp))
+
+
+Uavsar_temp <- flipImage(UavsarRGB_Eq, mode = "horizontal")
+plot(imagematrix(Uavsar_temp))
+```
+* __Funções "rotateImage" e "rotateFixed"__: A primeira função pode gerar uma rotação na imagem com um ângulo entre 0º e 360º, enquanto a segunda função pode apenas realizar uma rotação com os ângulos 90º, 180º e 270º, é interessante destacar que esta última leva menos tempo para ser executada.
+
+```{r}
+Uavsar_temp <- rotateImage(UavsarRGB_Eq, 15, threads = 1)
+plot(imagematrix(Uavsar_temp))
+
+Uavsar_temp <- rotateFixed(UavsarRGB_Eq, 270)
+plot(imagematrix(Uavsar_temp))
+```
+* __Função "resizeImage"__: Modifica o tamanho da imagem utilizando o método "bilinear" ou "nearest", podemos fornecer quatro parâmetros, o dado, largura, altura e o método, teremos como saída o dado expandido ou reduzido.
+
+```{r}
+Uavsar_temp <- resizeImage(UavsarRGB_Eq, 100, 100, method = "nearest")
+plot(imagematrix(Uavsar_temp))
+```
+* __Função "translation"__: Realiza uma translação na imagem, contudo devemos informar como parâmetros o dado no qual iremos realizar a operação, quantas linhas e colunas iremos mover, e para que o deslocamento seja em sentido contrário os valores terão que ser negativos.
+
+```{r}
+Uavsar_temp <- translation(UavsarRGB_Eq, shift_rows = 100, shift_cols = -30)
+plot(imagematrix(Uavsar_temp))
+```
+
+* __Função "edge_detection"__: Identifica os pontos onde o brilho da imagem muda drasticamente, poderíamos chamar de bordas ou pontos que apresentam descontinuidade, esta função suporta diversos métodos como "Frei_chen", "LoG"(Laplacian of Gaussian), "Prewitt", "Roberts_cross", "Scharr" e "Sobel". 
+```{r}
+Uavsar_temp <- edge_detection(UavsarRGB_Eq, method = 'Scharr', conv_mode = 'same')
+plot(imagematrix(Uavsar_temp))
+```
+* __Função "image_thresholding"__: Opera a segmentação da imagem com o método "thresholding".
+
+```{r}
+Uavsar_temp <- image_thresholding( UavsarRGB_Eq , thresh = 0.5)
+plot(imagematrix(Uavsar_temp))
+```
+* __Função "gamma_correction"__: Aplica a correção gamma com intuito de corrigir o brilho da imagem, devemos passar o dado e o valor gamma (Positivo).
+
+```{r}
+Uavsar_temp <- gamma_correction(UavsarRGB_Eq, gamma = 0.2)
+plot(imagematrix(Uavsar_temp))
+```
+* __Função "ZCAwhiten"__: Executa o método de Pré-processamento conhecido como "Whitening", com intuito de diminuir as correlações entre os pixels.
+
+```{r}
+Uavsar_temp <- ZCAwhiten(UavsarRGB_Eq, k = 20, epsilon = 0.1)
+
+UavsarRGB_Eq[1:6]
+
+Uavsar_temp[1:6]
+```
+* __Função "delationErosion"__: É utilizada para adicionar ou remover pixels nas bordas da imagem, devemos passar como parâmetro o dado, o método "delation" caso queiramos adicionar pixels ou "erosion" se formos remover os pixels, além disso a remoção e a adição dos pixels é baseado no parâmetro Filter que especifica as dimensões do Kernel.
+
+```{r}
+Uavsar_temp = delationErosion(UavsarRGB_Eq, Filter = c(5,5), method = 'delation')
+plot(imagematrix(Uavsar_temp))
+
+Uavsar_temp <- delationErosion(UavsarRGB_Eq, Filter = c(5,5), method = 'erosion')
+plot(imagematrix(Uavsar_temp))
+```
+#### Conclusão sobre a biblioteca __"OpenImageR"__
+
+É uma biblioteca rica em funções para processamento de imagem e sua característica mais importante é a fidelidade com o dado de entrada, uma vez que o formato e a representação utilizada são mantidas para os dados de saída, esse fato ajudo no entendimento de como o dado se comporta após cada operação. 
+
+### Biblioteca __"Magick"__
+
+```{r}
+require(magick)
+```
+
+
+  * __Função "image_read"__: Capaz de Transformar um dado recebido por referência de arquivo, URL, um objeto Raster ou array Bitmap em um objeto Magick, o qual possibilita a execução das funções inclusas na biblioteca.
+
+```{r}
+Uavsar_temp <- image_read(UavsarRGB_Eq)
+```
+
+* __Função "image_write"__: Possibilita a escrita do objeto magick nos formatos "png", "jpeg", "gif", "rgb" ou "rgba".
+
+```{r}
+image_write(Uavsar_temp, path = "Uavsar2.png", format = "png")
+```
+
+* __Função "image_convert"__: Realiza uma operação de conversão no dado para os formatos "png", "jpeg", "gif", "rgb" ou "rgba".
+
+```{r}
+image_convert(Uavsar_temp, format = "rgb")
+```
+
+* __Função "image_display"__: Oferece a possibilidade de visualizar o objeto magick, sendo necessário passar apenas ele como parâmetro.
+
+```{r}
+image_display(Uavsar_temp)
+```
+
+* __Função "image_border"__: Adiciona margens na imagem de acordo com os parâmetros.
+```{r}
+# Como podemos observar devemos passar a cor da borda em formato Hexadecimal e em seguida o tamanho
+plot(image_border(Uavsar_temp, "#000080", "20x20"))
+```
+
+* __Função "image_trim"__: Faz um recorte automático na imagem, de uma forma que torne-a mais compacta.
+
+```{r}
+plot(image_trim(Uavsar_temp))
+```
+
+* __Função "image_crop"__: Recorta a imagem de acordo com o parâmetro passado.
+
+```{r}
+plot(image_crop(Uavsar_temp, "100x200+40"))
+```
+
+* __Função "image_scale"__: Possibilidade de modificar os atributos height e width do objeto magick.
+
+```{r}
+# modifica o atributo "height" do objeto magick
+image_scale(Uavsar_temp, "x200")
+
+# modifica o atributo "width" do objeto magick
+image_scale(Uavsar_temp, "600")
+```
+
+* __Função "image_rotate"__: Gera a rotação no objeto magick de acordo com os valor do ângulo passado como parâmetro.
+
+```{r}
+# Objeto magick e o respectivo ângulo de rotação.
+plot(image_rotate(Uavsar_temp, 45))
+```
+
+* __Função "image_flip"__: Realiza um espelhamento vertical no objeto magick.
+
+```{r}
+plot(image_flip(Uavsar_temp))
+```
+
+* __Função "image_flop"__: Executa um espelhamento horizontal no objeto magick.
+
+```{r}
+plot(image_flop(Uavsar_temp))
+```
+
+* __Função "image_modulate"__: Modifica o brilho e a saturação na imagem de acordo com valores percentuais passados.
+
+```{r}
+plot(image_modulate(Uavsar_temp, saturation = 300, brightness = 100))
+```
+
+* __Função "image_fill"__: Com essa função é possível modificar a cor de uma região com base na posição e a cor passada como parâmetro, além disso o parâmetro fuzz serve para identificar a distância entre cores similares para serem modificadas e deve ser um valor entre 0 a 100.
+
+```{r}
+plot(image_fill(Uavsar_temp, "yellow", point = "+200", fuzz = 20))
+```
+
+* __Função "image_blur"__ Adiciona o filtro "blur" no objeto magick, bastando apenas passar o dado, o valor do raio e o desvio padrão laplaciano (Sigma).
+
+```{r}
+plot(image_blur(Uavsar_temp, 10, 5))
+```
+
+* __Função "image_noise"__: Aplica ruído na imagem com diferentes tipos, são eles "Gaussian", "Impulse", "Laplacian", "Multiplicative", "Poisson" e "Uniform". No código abaixo estarei mostrando apenas com o "Gaussian", mas a função funciona normalmente com os outros tipos.
+
+```{r}
+plot(image_noise(Uavsar_temp, noisetype = "Gaussian"))
+```
+
+* __Função "image_negate"__: Gera um filtro negativo na imagem.
+
+```{r}
+plot(image_negate(Uavsar_temp))
+```
+
+* __Função "image_convolve()"__: Possibilita a aplicação de uma matrix de convolução em uma imagem, iremos realizar a convolução com núcleo de "Edge detection", "Sharpen" e em seguida utilizar "standard kernels" disponibilizados pela biblioteca.
+
+```{r}
+
+# Com a matrix de convolução de "Edge detection"
+kern <- matrix(0, ncol = 3, nrow = 3)
+kern[1, 2] <- 1
+kern[2, c(1, 3)] <- 1
+kern[3, 2] <- 1
+kern[2, 2] <- -4
+
+plot(image_convolve(Uavsar_temp, kern))
+
+```
+
+```{r}
+# Com a matrix de convolução "Sharpen"
+kern[1, 2] <- -1
+kern[2, c(1, 3)] <- -1
+kern[3, 2] <- -1
+kern[2, 2] <- 5
+
+plot(image_convolve(Uavsar_temp, kern))
+```
+
+```{r}
+plot(Uavsar_temp %>% image_convolve('Sobel') %>% image_negate())
+```
+
+```{r}
+plot(Uavsar_temp %>% image_convolve('DoG:0,0,2') %>% image_negate())
+```
+
+#### Conclusão sobre a biblioteca __"magick"__
+
+Apresenta uma larga quantidade formatos e tipos suportados e operações que vão desde a leitura, processamento até visualização da imagem. Contudo, a maioria das suas funções possuem apenas compatibilidade com objetos magick, sendo necessário que o usuário converta seu dado "Cru"" para tal representação caso queira usufruir de seus recursos, isso pode gerar um certo desafio aos usuários mais iniciantes no âmbito de entender o que está acontecendo internamente com o dado passado a cada operação.
+
+### Biblioteca __"png"__:
+
+```{r}
+require(png)
+```
+
+
+* __Função "readPNG"__: Possibilita a Leitura de uma imagem no formato PNG, bastando passar como parâmetro o nome do arquivo o qual será lido, é necessário que a imagem esteja no diretório setado.
+
+```{r}
+UavsarPNG <- readPNG("Uavsar2.png", native = FALSE)
+plot(imagematrix(UavsarPNG))
+```
+
+* __Função "writePNG"__: Escreve uma imagem PNG como Raw data.
+
+```{r}
+Uavsar_temp <- writePNG(UavsarPNG)
+UavsarPNG[1:5]
+Uavsar_temp[1:5]
+```
+
+### Biblioteca __"tiff"__
+
+```{r}
+require(tiff)
+```
+
+* __Função "readTIFF"__: Opera a leitura de uma imagem Tiff.
+
+```{r}
+Uavsar_temp <- readTIFF(system.file("img", "Rlogo.tiff", package="tiff"))
+plot(imagematrix(Uavsar_temp))
+```
+
+* __Função "writeTIFF"__: Escreve uma imagem Tiff como Raw data.
+
+```{r}
+Uavsar_temp <- writeTIFF(UavsarRGB_Eq[,,1], raw(0))
+UavsarRGB_Eq[1:5]
+Uavsar_temp[1:5]
+```
+### Biblioteca __"readJPEG"__
+
+```{r}
+require(jpeg)
+```
+
+* __Função "readJPEG"__: Realiza a leitura de uma imagem jpeg e armazena em um array.
+```{r}
+Uavsar_temp <- readJPEG("/home/john/R notebook/Uavsar.jpeg")
+```
+
+* __Função "writeJPEG"__: Cria uma imagem jpeg a partir de um array ou matrix.
+
+```{r}
+Uavsar_temp <- writeJPEG(UavsarRGB_Eq, raw(), quality=0.3)
+```
+
+#### Conclusão das bibliotecas __"png","Tiff" e "png"__
+
+Como pôde ser visto essas bibliotecas oferecem funções mais direcionas a leitura e escrita de seus dados suportados, essas podem ser aproveitadas na construção de bibliotecas de processamento e visualização de imagens caso seja necessária a leitura desses tipos.
+
+### Biblioteca __"raster"__
+
+```{r}
+require(raster)
+```
+
+* __Função "raster"__: Cria um raster layer a partir de um dado passado.
+
+```{r}
+UavsarRas_R <- raster(UavsarRGB_Eq[,,1])
+UavsarRas_G <- raster(UavsarRGB_Eq[,,2])
+UavsarRas_B <- raster(UavsarRGB_Eq[,,3])
+```
+
+* __Função "brick"__: Cria um raster brick que pode armazenar a informação de diversos raster layers.
+
+```{r}
+UavsarBrick <- brick(UavsarRas_R, UavsarRas_G, UavsarRas_B)
+```
+
+* __Função "stack"__: Cria um raster stack a partir dos raster layers.
+
+```{r}
+UavsarStack <- stack(UavsarRas_R, UavsarRas_G, UavsarRas_B)
+```
+
+* __Função "nlayers"__: Obtém a quantidade de layers que compõe o objeto raster.
+
+```{r}
+nlayers(UavsarStack)
+```
+
+* __Função "res"__: É possivel setar e obter as dimensões do objeto raster.
+
+```{r}
+# Modifica as dimensões do objeto raster
+res(UavsarRas_B) <- c(300, 200)
+res(UavsarRas_G) <- c(150, 100)
+# Conferindo as dimensões do objeto raster
+res(UavsarRas_B)
+```
+
+* __Função "minValue" e "maxvalue"__: Possibilita a obtenção dos menores e maiores valores contidos no raster object.
+
+```{r}
+# Obtendo o menor valor do Raster Layer
+minValue(UavsarRas_R)
+# Obtendo o maior valor do Raster Layer
+maxValue(UavsarRas_R)
+```
+* __Função "round"__: Arredonda cada célula do raster object para o valor inteiro mais próximo.
+
+```{r}
+UavsarRound <- round(UavsarRas_R)
+UavsarRas_R[50]
+UavsarRound[50]
+```
+
+### Conclusão da biblioteca __"raster"__
+
+É uma biblioteca muito versatil para trabalhar com objetos raster, pois possui uma larga quantidade de funções com diversos niveis de complexidade as quais se forem bem utilizadas podem gerar aplicações bastante robustas.
