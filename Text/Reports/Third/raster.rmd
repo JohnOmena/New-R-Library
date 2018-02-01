@@ -1,0 +1,301 @@
+---
+title: "Manipulação e analise de dados espaciais com a biblioteca raster"
+author: "John Victor, Alejandro Frery"
+date: "Janeiro 25, 2018"
+output: html_notebook
+---
+
+### Introdução
+
+  A biblioteca raster possui diversas funções de diferentes níveis de complexidade que podem ser utilizadas para manipular e analisar um determinado dado raster. Além disso, tal biblioteca obtém maior significado caso estejamos utilizando suas funções para um determinado fim ou para oferecer suporte a uma determinada área do conhecimento, nesse documento iremos utilizar a maioria das suas funções para demonstrar aplicações especificas com dados espaciais.
+
+### Estrutura
+
+  Primeiramente, iremos introduzir a noção de dado espacial e de que forma podemos representar este na linguagem R. Além disso, daremos uma explicação sobre os principais objetos que podemos manipular e algumas funções básicas da biblioteca, em seguida comentaremos sobre suas peculiaridades, como a Raster Algebra e funções que se aplicam a objetos que não precisam está carregados na memória. Não obstante, mostraremos uma aplicação de sensoriamento remoto no qual iremos obter o dado, visualizar esse dado em diferentes bandas e por fim calcularemos seu NDVI (Normalized Difference Vegetation Index).
+
+### Dados Espaciais
+
+  Objetos e campos espaciais são alguns dos elementos que compõem um dado espacial, o primeiro pode-se referir a um rio, uma estrada, país ou cidade, enquanto que um campo espacial pode fazer alusão a elevação, temperatura ou pureza do ar. Além disso, normalmente, um objeto espacial é representado por um vector data e seu campo espacial por um raster data.
+  
+* __Vector data__: Os principais tipos de dados encontrados em um vector data são pontos, linhas e polígonos, em todos os casos a geometria dessas estruturas consiste de um conjunto de coordenadas (x , y). Além do mais, um ponto é o tipo de dado mais simples no qual consiste de uma coordenada par que associada a ela temos "n" variáveis que podem descrever o que queremos representar, uma linha é um tipo de dado um pouco mais complexo e é obtido através de um conjuntos de "pontos específicos" interligados que podem representar um rio com informações adicionais, como direção de fluxo, distancia ou conectividade, por fim temos o polígono no qual sua primeira coordenada coincide com sua ultima coordenada fazendo com que tenhamos um objeto fechado e seja uma ótima opção para representar objetos limitados, como regiões, estados e países. 
+
+
+* __Raster data__: Um dado raster é normalmente utilizado para representar variáveis continuas e possui a estrutura de uma grade dividida em pedaços retangulares de mesmo tamanho, cada elemento do dado raster pode ser chamado de célula ou de um pixel caso estejamos trabalhando com sensoriamento remoto.
+
+* __Representação básica de um campo espacial__: Abaixo, teremos um exemplo de como simular a precipitação com dados espaciais.
+
+```{r}
+
+# Nossos dados serão divididos por letras.
+name <- LETTERS[1:10]
+
+# Setamos os valores para latitude e longetitude dos dados.
+longitude <- c(-116.7, -120.4, -116.7, -113.5, -115.5,
+               -120.8, -119.5, -113.7, -113.7, -110.7)
+latitude <- c(45.3, 42.6, 38.9, 42.1, 35.7, 38.9,
+              36.2, 39, 41.6, 36.9)
+
+# Associamos cada index de stations a uma determinada longitude e latitude. 
+stations <- cbind(longitude, latitude)
+
+# Geramos valores aleátorios que representam a precipitação. 
+set.seed(0)
+precip <- (runif(length(latitude))*10)^3
+
+# Determinamos um padrão de tamanho com base no dado de precipitação e plotamos nosso dado.
+psize <- 1 + precip/500
+plot(stations, cex=psize, pch=20, col='red', main='Precipitation')
+
+# Adicionamos nomes baseados em letras.
+text(stations, name, pos=4)
+
+# Adicionamos uma legenda que diferencie os dados.
+breaks <- c(100, 500, 1000, 2000)
+legend("topright", legend=breaks, pch=20, pt.cex=psize, col='red', bg='gray')
+
+```
+
+* __Representação básica de objetos espaciais__: Abaixo, criaremos alguns objetos espaciais que podem ser entendidos como estradas ou estados, dependendo de qual tipo de vector data estejamos trabalhando:
+
+```{r}
+# Setamos valores de longitude e latitude para nossos objetos espaciais.
+lon <- c(-116.8, -114.2, -112.9, -111.9, -114.2, -115.4, -117.7)
+lat <- c(41.3, 42.9, 42.4, 39.8, 37.6, 38.3, 37.6)
+
+# Associamos cada longitude a uma determinada latitude.
+x <- cbind(lon, lat)
+
+# Obtemos a visualização do dado espacial.
+plot(stations, main='Precipitation')
+
+# Criamos um objeto espacial no formato de um poligono.
+polygon(x, col='blue', border='light blue')
+# Criamos as linhas que ligam os pontos de precipitação e adicionamos pontos nos vertices do poligono.
+lines(stations, lwd=3, col='red')
+points(x, cex=2, pch=20)
+# Adicionamos os pontos de precipitação.
+points(stations, cex=psize, pch=20, col='red', main='Precipitation')
+```
+
+### Objetos raster
+
+* __RasterLayer__: Representa uma camada única do dado raster, esse objeto sempre armazena parâmetros fundamentais que o descreve, como número de linhas e colunas, extensão espacial e seu sistema de referencia de coordenadas. Além disso, podemos criar um raster layer a partir de um arquivo ou criar apenas seu esqueleto. Abaixo, apresentaremos como obter um dado raster a partir de seu esqueleto e dar algumas funcionalidades em sua plotagem.
+
+```{r}
+# Carregando a biblioteca.
+library('raster')
+
+# Criando o esqueleto de um raster layer com os parametros passados.
+r <- raster(ncol=10, nrow=10, xmx=-80, xmn=-150, ymn=20, ymx=60)
+
+# Visualizando o raster layer criado.
+r
+
+# Teremos seus valores armazenados na memória apenas quando atribuirmos valores ao dado.
+inMemory(r)
+```
+
+```{r}
+# Atribuindo valores aleatórios para cada célula do dado raster.
+values(r) <- 1:ncell(r)
+
+# Novos atributos apareceram a medida que atribuimos valores ao dado.
+r
+
+# Agora nosso dado se encontra na memoria, pois atribuimos valores ao dado.
+inMemory(r)
+```
+
+* __Adicionando alguns objetos espaciais ao dado__:
+
+```{r}
+plot(r)
+
+# Adicionando pontos e polígonos na plotagem do dado. 
+lon <- c(-116.8, -114.2, -112.9, -111.9, -114.2, -115.4, -117.7)
+lat <- c(41.3, 42.9, 42.4, 39.8, 37.6, 38.3, 37.6)
+lonlat <- cbind(lon, lat)
+
+# Adicionando a visualização do poligono com as posições fornecidas.
+pols <- spPolygons(lonlat, crs= NA)
+plot(pols, border='blue', lwd=2, add=TRUE)
+
+# Adicionando pontos a partir das latitudes e longitudes dadas.
+points(lonlat, col='red', pch=20, cex=1)
+
+```
+
+* __RasterStack__: É um objeto que possibilita o armazenamento de diversos raster layers simultaneamente contanto que possua a mesma extensão espacial e resolução, além disso é possível formar esse objeto a partir de arquivos separados, e também misturar os dados que existem em um rasterStack com raster layers que apenas existem na memória RAM e não no disco.
+
+* __RasterBrick__: Objeto que também é composto por diversos raster layers, sendo que seu processamento pode ser mais rápido que quando trabalharmos com rasterStack, entretanto é possível referir apenas a um único arquivo.
+
+```{r}
+# Obtendo um raster layer a partir da multiplicação de dois raster layers.
+r2 <- r * r
+
+# Obtendo outro raster layer tirando a raiz quadrada de cada célula de outro raster layer.
+r3  <- sqrt(r)
+
+# Criando um rasterStack através de três raster layers fornecidos como parâmetro.
+s <- stack(r, r2, r3)
+
+# Criando um rasterBrick de um rasterStack.
+b <- brick(s)
+
+# visualizando o rasterStack
+plot(s)
+
+```
+### Algumas funções raster
+
+A biblioteca raster possui uma grande quantidade de funções, com isso selecionei algumas funções para serem explicadas.
+
+* __getValues e getValuesBlock__: A primeira função permite obter dados que estejam armazenados em uma determinada linha do raster layer, e segunda permite obter os dados a partir de um bloco especificado como parâmetro.
+
+```{r}
+# Lendo o dado raster
+r <- raster(system.file("external/test.grd", package="raster"))
+
+# Obtendo o dado de uma linha do dado
+v <- getValues(r, 50)
+v[35:39]
+
+# Retirando valores a partir de um bloco especificado do dado raster
+getValuesBlock(r, 50, 1, 35, 5)
+```
+
+* __Helper functions__: Diversas funções que fornecem informações simples dependendo de que forma você quer obter esse valor, pois os dados contidos no objeto raster podem ser considerados como um vetor ou uma matriz.
+
+```{r}
+r2 <- raster(ncol=36, nrow=18)
+ncol(r2)
+
+nrow(r2)
+
+ncell(r2)
+
+rowFromCell(r2, 100)
+
+colFromCell(r2, 100)
+
+cellFromRowCol(r2,5,5)
+
+xyFromCell(r2, 100)
+
+cellFromXY(r2, c(0,0))
+
+colFromX(r2, 0)
+
+rowFromY(r2, 0)
+```
+
+
+### Raster algebra
+
+A maioria das funções matemáticas implementadas em R e as conhecidas operações lógicas podem ser utilizadas com objetos raster, podemos citar funções como, abs(), round(), ceiling(), floor(), trunc(), sqrt(), log(), exp(), cos(), sin() e entre outras mais.
+
+```{r}
+# Criando o esqueleto de um raster layer.
+r <- raster(ncol=10, nrow=10)
+
+# Atribuindo valores para meu dado raster.
+values(r) <- 1:ncell(r)
+
+# Algumas operações algebricas que são possiveis com dados raster.
+s <- r + 10
+s <- sqrt(s)
+s <- s * r + 5
+r[] <- runif(ncell(r))
+r <- round(r)
+r <- r == 1
+
+# Podemos também utilizar as funções de substituição.
+s[r] <- -0.5
+s[!r] <- 5
+s[s == 5] <- 15
+
+# Algumas aplicações com funções matematicas e objetos raster. 
+a <- mean(r,s,10)
+b <- sum(r,s)
+st <- stack(r, s, a, b)
+sst <- sum(st)
+```
+
+### Funções de alto nivel
+
+Refere-se a funções que oferecem suporte para a análise de dados raster, todas essas funções trabalham com dados que não podem ser carregados na memória, tipicamente os parâmetros consistiram de um objeto raster "x", seguido de "filename = " que indica o nome do arquivo que deverá ser criado e outros argumentos que informarão o formato de arquivo e o tipo de dado armazenado.
+
+* __aggregate e disggregate__: Permitem mudar a resolução de um raster object, precisando especificar uma determinada função para que seja feito algo com a parte agrupada.
+
+```{r}
+# Criando um Raster Layer e utilizando as funções.
+r <- raster()
+
+r[] <- 1:ncell(r)
+# Visualizando a resolução inicial.
+res(r)
+ra <- aggregate(r, 20)
+# Resolução após aplicar a função aggregate.
+res(ra)
+rd <- disaggregate(ra, 20)
+# Resolução após aplicar a função disaggregate.
+res(rd)
+```
+
+* __crop e merge__: A função crop é utilizada para cortar um raster layer, sendo necessário passar a nova extensão que deverá está nos limites do dado anterior, enquanto que a função merge pode juntar dois raster layers.
+
+```{r}
+# Criando dois raster layers iguais 
+r1 <- r2 <- raster(nrow=10, ncol=10)
+
+# Setando valores para os objetos raster
+values(r1) <- runif(ncell(r1))
+values(r2) <- runif(ncell(r2))
+
+# Obtendo as partes dos dados que é passado como extensão.
+r1 <- crop(r, extent(-50,0,0,30))
+r2 <- crop(r, extent(-10,50,-20, 10))
+
+# Juntando os dois dados gerados com a função crop.
+m <- merge(r1, r2, filename='test.grd', overwrite=TRUE)
+plot(m)
+
+```
+
+
+### Sensoriamento Remoto
+
+O dado no qual iremos trabalhar pode ser obtido clicando [aqui](http://www.rspatial.org/analysis/data/rsdata.zip), ao decorrer do processo iremos mostrar como ler e visualizar nosso dado e realizar uma aplicação de NDVI.
+
+* __Lendo e visualizando o dado__
+
+```{r warning=FALSE}
+# Lendo o dado a partir de um arquivo tif.
+r <- brick(readTIFF("landsat8-2016march.tif"))
+# Visualizando o dado RGB.
+plotRGB(r, r = 3, g = 2, b = 1, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
+
+```
+
+```{r warning=FALSE}
+# Obtendo uma nova visualização com outras bandas.
+plotRGB(r, r = 4, g = 3, b = 2, axes = TRUE, stretch = "lin", main = "Landsat False Color Composite")
+```
+
+* __Aplicação NDVI__
+```{r}
+# Função de NDVI.
+NDVI <- function(img, i, k) {
+   bi <- img[[i]]
+   bk <- img[[k]]
+   vi <- (bk - bi) / (bk + bi)
+   return(vi)
+}
+
+# Extraindo o dado com a aplicação NDVI, usamos as banda RED e NIR.
+ndvi <- NDVI(r, 3, 4)
+
+# Obtendo a visualização do dado.
+plot(ndvi, col = rev(terrain.colors(30)), main = 'NDVI from Landsat')
+```
+
