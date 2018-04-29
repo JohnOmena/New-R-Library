@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2018-03-22 08:32:53
+[georeference]
+nrows=702
+ncols=206
+xmin=0
+ymin=0
+xmax=206
+ymax=702
+projection=+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=3
+bandorder=BIL
+minvalue=0.408866484109203:0.408866484109203:0.408866484109203
+maxvalue=1:1:1
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=Red.Band:Green.Band:Blue.Band

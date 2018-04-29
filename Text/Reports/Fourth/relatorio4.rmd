@@ -1,0 +1,61 @@
+---
+title: "Aplicação dos recursos existentes em R nas imagens PolSAR"
+author: "John Victor, Alejandro Frery"
+date: "Janeiro 19, 2018"
+output: html_notebook
+---
+
+### Introdução
+
+  Primeiramente, foram identificados três desafios ao se trabalhar com as imagens PolSAR na linguagem R que seriam a carência de metadados para a imagem, tendo em vista o processamento bruto e direto com os arquivos .slc, uma visualização dos dados com poucas informações e o enorme tamanho que essas imagens podem ter. Entretanto, a biblioteca raster oferece recursos para solucionar tais problemas e que serão apresentados mais adiante.
+  
+  
+### Dado utilizado  
+  
+  O código abaixo carrega o dado que será utilizado nessa apresentação
+  
+```{r}
+library(raster)
+setwd("/home/john/New-R-Library/New-R-Library/Text/Reports/Fourth")
+load("Uavsar.rdata")
+```
+
+  
+### Metadados
+
+  O fato de estarmos obtendo a imagem diretamente do arquivo .slc faz com que seja necessário o processamento desses dados para acrescentar informações essenciais ao se trabalhar com imagens que possui dados geográficos. Além disso, foi visto que a comunidade normalmente utiliza diversos formatos de arquivos para representar melhor essas imagens, um exemplo comum é o formato GeoTIFF que contém metadados da imagem. Felizmente, a biblioteca raster oferece um tipo de objeto que pode armazenar atributos como extent, spatial reference e statical values (Mean value, min value...).
+  
+```{r}
+# Obtenção das bandas da imagem e a transformação em raster layers
+r1 <- raster(UavsarRGB_Eq[,,1])
+r2 <- raster(UavsarRGB_Eq[,,2])
+r3 <- raster(UavsarRGB_Eq[,,3])
+
+# Apresentação dos principais metadados
+r123 <- stack(r1, r2, r3)
+```
+
+### Visualização do dado
+
+  A falta de informações no raster layer ocasiona em uma visualização com poucas informações geográficas, mais abaixo teremos exemplos de plotagem dos dados, a primeira trata-se de uma visualização utilizada no meio acadêmico, a segunda é como encontra-se o nosso raster layers e a terceira é o que conseguimos fazer com poucas alterações no objeto raster.
+
+__Visualização academica:__  
+![](/home/john/New-R-Library/New-R-Library/Text/Reports/Fourth/VisuAcademic.png)
+
+__Visualização sem tratamento:__
+```{r}
+plot(r123)
+```
+
+__Visualização com tratamento básico:__
+
+```{r}
+ext <- extent(c(0, 206, 0, 702))
+r123 <- setExtent(r123, ext)
+names(r123) <- c("Red Band","Green Band","Blue Band")
+crs(r123) <- "+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs"
+
+plot(r123, nc = 3, nr = 1)
+r123
+```
+
