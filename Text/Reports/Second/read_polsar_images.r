@@ -68,6 +68,7 @@ read_mlc <- function(file, nrow, ncol) { #Função ainda muito pesada
   return(matrix)
    
 }
+
 read_mini_RGB_mlc <- function(fileR, fileG, fileB, nrow, ncol) {
   
   dataR <- read_mlc(fileR, nrow, ncol)
